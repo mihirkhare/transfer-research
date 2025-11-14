@@ -97,6 +97,6 @@ public:
 
 public:
 	// If memory is not enough, give up creating BFs
-	bool GiveUpBFCreation(const DataChunk &chunk, OperatorSinkInput &input) const;
+	bool GiveUpBFCreation(const DataChunk &chunk, OperatorSinkInput &input, ClientContext &context) const;
 };
 } // namespace duckdb

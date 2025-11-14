@@ -191,7 +191,7 @@ public:
 	unique_ptr<TemporaryMemoryState> temporary_memory_state;
 };
 
-bool PhysicalCreateBF::GiveUpBFCreation(const DataChunk &chunk, OperatorSinkInput &input) const {
+bool PhysicalCreateBF::GiveUpBFCreation(const DataChunk &chunk, OperatorSinkInput &input, ClientContext &context) const {
 	auto &lstate = input.local_state.Cast<CreateBFLocalSinkState>();
 	auto &gstate = input.global_state.Cast<CreateBFGlobalSinkState>();
 
@@ -227,15 +227,17 @@ bool PhysicalCreateBF::GiveUpBFCreation(const DataChunk &chunk, OperatorSinkInpu
 			double row_length = static_cast<double>(gstate.total_row_size) / input_rows;
 			
 			// TODO: Currently, the number of threads affect the accuracy of progress percent.
-			if (gstate.num_threads > 8) {
-				if (selectivity > 0.35 || (row_length > 40 && selectivity > 0.2)) {
-					is_successful = false;
-					return true;
-				}
-			} else {
-				if (progress_percent < 0.65 && (selectivity > 0.35 || (row_length > 40 && selectivity > 0.2))) {
-					is_successful = false;
-					return true;
+			if (ClientConfig::GetConfig(context).transfer_mode == RPT_PLUS) {
+				if (gstate.num_threads > 8) {
+					if (selectivity > 0.35 || (row_length > 40 && selectivity > 0.2)) {
+						is_successful = false;
+						return true;
+					}
+				} else {
+					if (progress_percent < 0.65 && (selectivity > 0.35 || (row_length > 40 && selectivity > 0.2))) {
+						is_successful = false;
+						return true;
+					}
 				}
 			}
 
@@ -257,7 +259,7 @@ bool PhysicalCreateBF::GiveUpBFCreation(const DataChunk &chunk, OperatorSinkInpu
 SinkResultType PhysicalCreateBF::Sink(ExecutionContext &context, DataChunk &chunk, OperatorSinkInput &input) const {
 	auto &state = input.local_state.Cast<CreateBFLocalSinkState>();
 
-	if (!is_successful || GiveUpBFCreation(chunk, input)) {
+	if (!is_successful || GiveUpBFCreation(chunk, input, context.client)) {
 		return SinkResultType::FINISHED;
 	}
 

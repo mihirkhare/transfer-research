@@ -10,6 +10,7 @@
 
 #include "duckdb/planner/logical_operator.hpp"
 #include "duckdb/planner/operator/logical_create_bf.hpp"
+#include "duckdb/main/client_config.hpp"
 
 namespace duckdb {
 
@@ -17,7 +18,7 @@ namespace duckdb {
 //! shared ptr to link.
 class TransferBFLinker {
 public:
-	TransferBFLinker() : state(State::COLLECT_BF_CREATORS) {
+	explicit TransferBFLinker(ClientContext &context) : state(State::COLLECT_BF_CREATORS), context(context) {
 	}
 
 	void LinkBFOperators(LogicalOperator &op);
@@ -41,6 +42,8 @@ protected:
 		SMOOTH_MARK_JOIN
 	};
 	State state;
+
+	ClientContext &context;
 
 	struct FilterPlanHash {
 		size_t operator()(const FilterPlan *fp) const {

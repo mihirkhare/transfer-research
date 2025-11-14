@@ -19,11 +19,14 @@ void TransferBFLinker::LinkBFOperators(LogicalOperator &op) {
 	state = State::CLEAN_USELESS_OPERATORS;
 	VisitOperator(op);
 
-	state = State::UPDATE_MIN_MAX_BINDING;
-	VisitOperator(op);
+	if (ClientConfig::GetConfig(context).transfer_mode == RPT_PLUS) {
+		// TODO: should this one happen always? what does it even do?
+		state = State::UPDATE_MIN_MAX_BINDING;
+		VisitOperator(op);
 
-	state = State::SMOOTH_MARK_JOIN;
-	VisitOperator(op);
+		state = State::SMOOTH_MARK_JOIN;
+		VisitOperator(op);
+	}
 }
 
 void TransferBFLinker::VisitOperator(LogicalOperator &op) {

@@ -32,7 +32,7 @@ PhysicalOperator &PhysicalPlanGenerator::ResolveAndPlan(unique_ptr<LogicalOperat
 	auto &profiler = QueryProfiler::Get(context);
 
 	// Create and link BloomFilters for UseBFOperator and CreateBFOperator
-	TransferBFLinker linker;
+	TransferBFLinker linker(context);
 	linker.LinkBFOperators(*op);
 
 	// Resolve the column references.

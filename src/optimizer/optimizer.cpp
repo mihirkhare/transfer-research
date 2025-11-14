@@ -167,8 +167,9 @@ void Optimizer::RunBuiltInOptimizers() {
 		plan = ic_rewriter.Rewrite(std::move(plan));
 	});
 
-	// Perform predicate transfer and join order optimization
-	{
+	// Perform predicate transfer and join order optimization if performing RPT(+)
+	if (ClientConfig::GetConfig(context).transfer_mode == RPT ||
+		ClientConfig::GetConfig(context).transfer_mode == RPT_PLUS) {
 		// 1. Extract information for predicate transfer, because some information may be lost in the next step.
 		PredicateTransferOptimizer PT(context);
 		plan = PT.PreOptimize(std::move(plan));
@@ -182,6 +183,11 @@ void Optimizer::RunBuiltInOptimizers() {
 
 		// 3. Insert BloomFilter-related operators
 		plan = PT.Optimize(std::move(plan));
+	} else {
+		RunOptimizer(OptimizerType::JOIN_ORDER, [&]() {
+			JoinOrderOptimizer optimizer(context);
+			plan = optimizer.Optimize(std::move(plan));
+		});
 	}
 
 	// rewrites UNNESTs in DelimJoins by moving them to the projection

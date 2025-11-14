@@ -152,6 +152,22 @@ static void PragmaDisableOptimizer(ClientContext &context, const FunctionParamet
 	ClientConfig::GetConfig(context).enable_optimizer = false;
 }
 
+static void PragmaTransferNone(ClientContext &context, const FunctionParameters &parameters) {
+	ClientConfig::GetConfig(context).transfer_mode = NONE;
+}
+
+static void PragmaTransferLIP(ClientContext &context, const FunctionParameters &parameters) {
+	ClientConfig::GetConfig(context).transfer_mode = LIP;
+}
+
+static void PragmaTransferRPT(ClientContext &context, const FunctionParameters &parameters) {
+	ClientConfig::GetConfig(context).transfer_mode = RPT;
+}
+
+static void PragmaTransferRPTPlus(ClientContext &context, const FunctionParameters &parameters) {
+	ClientConfig::GetConfig(context).transfer_mode = RPT_PLUS;
+}
+
 void PragmaFunctions::RegisterFunction(BuiltinFunctions &set) {
 	RegisterEnableProfiling(set);
 
@@ -195,6 +211,11 @@ void PragmaFunctions::RegisterFunction(BuiltinFunctions &set) {
 	set.AddFunction(PragmaFunction::PragmaStatement("enable_checkpoint_on_shutdown", PragmaEnableCheckpointOnShutdown));
 	set.AddFunction(
 	    PragmaFunction::PragmaStatement("disable_checkpoint_on_shutdown", PragmaDisableCheckpointOnShutdown));
+
+	set.AddFunction(PragmaFunction::PragmaStatement("transfer_none", PragmaTransferNone));
+	set.AddFunction(PragmaFunction::PragmaStatement("transfer_lip", PragmaTransferLIP));
+	set.AddFunction(PragmaFunction::PragmaStatement("transfer_rpt", PragmaTransferRPT));
+	set.AddFunction(PragmaFunction::PragmaStatement("transfer_rptplus", PragmaTransferRPTPlus));
 }
 
 } // namespace duckdb

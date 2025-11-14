@@ -24,6 +24,13 @@ class ClientContext;
 class PhysicalResultCollector;
 class PreparedStatementData;
 
+enum TransferMode {
+	NONE,
+	LIP,
+	RPT,
+	RPT_PLUS
+};
+
 typedef std::function<unique_ptr<PhysicalResultCollector>(ClientContext &context, PreparedStatementData &data)>
     get_result_collector_t;
 
@@ -46,6 +53,12 @@ struct ClientConfig {
 	//! Allows suppressing profiler output, even if enabled. We turn on the profiler on all test runs but don't want
 	//! to output anything
 	bool emit_profiler_output = true;
+
+	/** LIP/RPT/RPT+ *********************************************************/
+
+	TransferMode transfer_mode = NONE;
+
+	/*************************************************************************/
 
 	//! system-wide progress bar disable.
 	const char *system_progress_bar_disable_reason = nullptr;
