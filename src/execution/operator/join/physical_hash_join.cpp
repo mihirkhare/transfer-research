@@ -993,7 +993,7 @@ OperatorResultType PhysicalHashJoin::ExecuteInternal(ExecutionContext &context, 
 	if (lip_type & LIP_PROBE) {
 		state.probe_data->ProbeBFs(input);
 		if (input.size() == 0) {
-			chunk.Reference(input);
+			chunk.Slice(0, 0);
 			return OperatorResultType::NEED_MORE_INPUT;
 		}
 	}
