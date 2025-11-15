@@ -47,6 +47,20 @@ struct DuckDBBenchmarkState : public BenchmarkState {
 			res = conn.Query("PRAGMA profiling_mode=" + profiling_mode);
 			D_ASSERT(!res->HasError());
 		}
+		switch (instance.transfer_mode) {
+		case NONE:
+			conn.Query("PRAGMA transfer_none");
+			break;
+		case LIP:
+			conn.Query("PRAGMA transfer_lip");
+			break;
+		case RPT:
+			conn.Query("PRAGMA transfer_rpt");
+			break;
+		case RPT_PLUS:
+			conn.Query("PRAGMA transfer_rptplus");
+			break;
+		}
 	}
 	virtual ~DuckDBBenchmarkState() {
 	}

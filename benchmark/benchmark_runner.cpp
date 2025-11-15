@@ -203,6 +203,8 @@ void BenchmarkRunner::RunBenchmarks() {
 
 void print_help() {
 	fprintf(stderr, "Usage: benchmark_runner\n");
+	fprintf(stderr, "			   --transfer=mode        Sets the transfer mode (none, lip, rpt, rptplus) (default: "
+					"none)\n");
 	fprintf(stderr, "              --list                 Show a list of all benchmarks\n");
 	fprintf(stderr, "              --profile              Prints the query profile information\n");
 	fprintf(stderr, "              --detailed-profile     Prints detailed query profile information\n");
@@ -263,7 +265,22 @@ void parse_arguments(const int arg_counter, char const *const *arg_values) {
 		// make it summarize failures by default
 		summarize = true;
 		string arg = arg_values[arg_index];
-		if (arg == "--list") {
+		if (StringUtil::StartsWith(arg, "--transfer=")) {
+			string transfer_mode = StringUtil::Split(arg, '=')[1];
+			if (transfer_mode == "none") {
+				instance.transfer_mode = NONE;
+			} else if (transfer_mode == "lip") {
+				instance.transfer_mode = LIP;
+			} else if (transfer_mode == "rpt") {
+				instance.transfer_mode = RPT;
+			} else if (transfer_mode == "rptplus") {
+				instance.transfer_mode = RPT_PLUS;
+			} else {
+				fprintf(stderr, "Invalid transfer mode specified (none, lip, rpt, rptplus)");
+				print_help();
+				exit(1);
+			}
+		} else if (arg == "--list") {
 			// list names of all benchmarks
 			for (auto &benchmark : benchmarks) {
 				fprintf(stdout, "%s\n", benchmark->name.c_str());

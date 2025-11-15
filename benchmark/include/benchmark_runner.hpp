@@ -14,6 +14,8 @@
 #include "benchmark.hpp"
 #include "duckdb/common/constants.hpp"
 #include "duckdb/common/fstream.hpp"
+#include "duckdb/main/client_config.hpp"
+
 #include <thread>
 
 namespace duckdb {
@@ -52,6 +54,8 @@ public:
 	ofstream log_file;
 	uint32_t threads = MaxValue<uint32_t>(std::thread::hardware_concurrency(), 1u);
 	unordered_map<string, string> custom_arguments;
+
+	TransferMode transfer_mode = NONE;
 };
 
 } // namespace duckdb
