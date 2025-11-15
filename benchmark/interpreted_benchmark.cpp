@@ -49,6 +49,21 @@ struct InterpretedBenchmarkState : public BenchmarkState {
 		auto &instance = BenchmarkRunner::GetInstance();
 		auto res = con.Query("PRAGMA threads=" + to_string(instance.threads));
 		D_ASSERT(!res->HasError());
+
+		switch (instance.transfer_mode) {
+		case NONE:
+			con.Query("PRAGMA transfer_none");
+			break;
+		case LIP:
+			con.Query("PRAGMA transfer_lip");
+			break;
+		case RPT:
+			con.Query("PRAGMA transfer_rpt");
+			break;
+		case RPT_PLUS:
+			con.Query("PRAGMA transfer_rptplus");
+			break;
+		}
 	}
 
 	duckdb::unique_ptr<DBConfig> GetBenchmarkConfig(const string &version = "") {
