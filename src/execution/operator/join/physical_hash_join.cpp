@@ -160,6 +160,10 @@ public:
 			}
 			global_filter_state = op.filter_pushdown->GetGlobalState(context, op);
 		}
+
+		if (op.lip_type & LIP_BUILD) {
+			op.bf_build->Initialize(context_p, 2044 /* op.children[1].get().estimated_cardinality */);
+		}
 	}
 
 	void ScheduleFinalize(Pipeline &pipeline, Event &event);
@@ -322,6 +326,10 @@ void JoinFilterPushdownInfo::Sink(DataChunk &chunk, JoinFilterLocalState &lstate
 SinkResultType PhysicalHashJoin::Sink(ExecutionContext &context, DataChunk &chunk, OperatorSinkInput &input) const {
 	auto &gstate = input.global_state.Cast<HashJoinGlobalSinkState>();
 	auto &lstate = input.local_state.Cast<HashJoinLocalSinkState>();
+
+	if (lip_type & LIP_BUILD) {
+		bf_build->Insert(chunk);
+	}
 
 	// resolve the join keys for the right chunk
 	lstate.join_keys.Reset();
@@ -925,6 +933,9 @@ class HashJoinOperatorState : public CachingOperatorState {
 public:
 	explicit HashJoinOperatorState(ClientContext &context, HashJoinGlobalSinkState &sink)
 	    : probe_executor(context), scan_structure(*sink.hash_table, join_key_state) {
+		if (sink.op.lip_type & LIP_PROBE) {
+			probe_data = make_uniq<LIPProbeInfo>(sink.op.bf_probe);
+		}
 	}
 
 	DataChunk lhs_join_keys;
@@ -939,6 +950,8 @@ public:
 	JoinHashTable::ProbeState probe_state;
 	//! Chunk to sink data into for external join
 	DataChunk spill_chunk;
+
+	unique_ptr<LIPProbeInfo> probe_data;
 
 public:
 	void Finalize(const PhysicalOperator &op, ExecutionContext &context) override {
@@ -976,6 +989,14 @@ OperatorResultType PhysicalHashJoin::ExecuteInternal(ExecutionContext &context, 
 	auto &sink = sink_state->Cast<HashJoinGlobalSinkState>();
 	D_ASSERT(sink.finalized);
 	D_ASSERT(!sink.scanned_data);
+
+	if (lip_type & LIP_PROBE) {
+		state.probe_data->ProbeBFs(input);
+		if (input.size() == 0) {
+			chunk.Reference(input);
+			return OperatorResultType::NEED_MORE_INPUT;
+		}
+	}
 
 	if (sink.hash_table->Count() == 0) {
 		if (EmptyResultIfRHSIsEmpty()) {

@@ -166,6 +166,15 @@ public:
 	    : bloom_filter(std::move(bloom_filter)), bound_cols_applied(applied), bound_cols_built(built) {
 	}
 
+	BloomFilterUsage(const vector<idx_t> &applied, const vector<idx_t> &built)
+	: bound_cols_applied(applied), bound_cols_built(built) {
+	}
+
+	void Initialize(ClientContext &context, uint32_t est_num_rows) {
+		bloom_filter = make_shared_ptr<BloomFilter>();
+		bloom_filter->Initialize(context, est_num_rows);
+	}
+
 	bool IsValid() const {
 		return bloom_filter->finalized_;
 	}
@@ -175,7 +184,7 @@ public:
 		return bloom_filter->Lookup(chunk, results, bound_cols_applied);
 	}
 	void Insert(DataChunk &chunk) const {
-		return bloom_filter->Insert(chunk, bound_cols_applied);
+		return bloom_filter->Insert(chunk, bound_cols_built);
 	}
 
 private:
