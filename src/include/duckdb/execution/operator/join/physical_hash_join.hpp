@@ -31,7 +31,7 @@ public:
 	explicit LIPProbeInfo(const vector<shared_ptr<BloomFilterUsage>>& lip_filters) :
 		lip_filters(lip_filters), probe_order(lip_filters.size()), bf_hit_counts(lip_filters.size()),
 		bf_total_counts(lip_filters.size()), bf_hit_percentages(lip_filters.size()),
-		/* hash_staging(LogicalType::HASH), */ probe_res(STANDARD_VECTOR_SIZE), probe_sel(STANDARD_VECTOR_SIZE) {
+		hash_staging(LogicalType::HASH), probe_res(STANDARD_VECTOR_SIZE), probe_sel(STANDARD_VECTOR_SIZE) {
 		for (idx_t i = 0; i < lip_filters.size(); i++) {
 			probe_order[i] = i;
 		}
@@ -55,8 +55,8 @@ public:
 	//! Percentage of each BF
 	vector<pair<double, idx_t>> bf_hit_percentages;
 
-	// //! staging area for hashes
-	// Vector hash_staging;
+	//! staging area for hashes
+	Vector hash_staging;
 	//! results vector for probes (no need to clear between probes)
 	vector<uint32_t> probe_res;
 	//! sel vector for probe results (no need to clear between probes)
@@ -78,7 +78,7 @@ public:
 			// TODO: there has to be a better way to do this lmao
 			//  e.g. Lookup can just return a new chunk ? or at least a sel vector
 			// filter->Lookup(chunk, probe_res, hash_staging);
-			filter->Lookup(input, probe_res);
+			filter->Lookup(input, probe_res, hash_staging);
 
 			idx_t result_count = 0;
 			for (idx_t i = 0; i < input.size(); i++) {

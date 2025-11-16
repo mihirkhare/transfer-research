@@ -22,9 +22,8 @@ static uint32_t CeilPowerOfTwo(uint32_t n) {
 	return n + 1;
 }
 
-static Vector HashColumns(DataChunk &chunk, const vector<idx_t> &cols) {
+static Vector HashColumns(DataChunk &chunk, const vector<idx_t> &cols, Vector &hashes) {
 	auto count = chunk.size();
-	Vector hashes(LogicalType::HASH);
 	VectorOperations::Hash(chunk.data[cols[0]], hashes, count);
 	for (size_t j = 1; j < cols.size(); j++) {
 		VectorOperations::CombineHash(hashes, chunk.data[cols[j]], count);
@@ -52,16 +51,21 @@ void BloomFilter::Initialize(ClientContext &context_p, uint32_t est_num_rows) {
 	std::fill_n(blocks, num_sectors, 0);
 }
 
-int BloomFilter::Lookup(DataChunk &chunk, vector<uint32_t> &results, const vector<idx_t> &bound_cols_applied) const {
+int BloomFilter::Lookup(DataChunk &chunk, vector<uint32_t> &results, const vector<idx_t> &bound_cols_applied, Vector &hashes) const {
 	int count = static_cast<int>(chunk.size());
-	Vector hashes = HashColumns(chunk, bound_cols_applied);
+	HashColumns(chunk, bound_cols_applied, hashes);
 	BloomFilterLookup(count, reinterpret_cast<uint64_t *>(hashes.GetData()), blocks, results.data());
 	return count;
 }
 
-void BloomFilter::Insert(DataChunk &chunk, const vector<idx_t> &bound_cols_built) {
+void BloomFilter::Insert(DataChunk &chunk, const vector<idx_t> &bound_cols_built, Vector &hashes) {
 	int count = static_cast<int>(chunk.size());
-	Vector hashes = HashColumns(chunk, bound_cols_built);
+	HashColumns(chunk, bound_cols_built, hashes);
 	BloomFilterInsert(count, reinterpret_cast<uint64_t *>(hashes.GetData()), blocks);
+}
+
+void BloomFilter::Insert(DataChunk &chunk, const vector<idx_t> &bound_cols_built) {
+	auto v = Vector(LogicalType::HASH);
+	Insert(chunk, bound_cols_built, v);
 }
 } // namespace duckdb

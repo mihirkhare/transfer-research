@@ -216,7 +216,7 @@ unique_ptr<JoinFilterLocalState> JoinFilterPushdownInfo::GetLocalState(JoinFilte
 class HashJoinLocalSinkState : public LocalSinkState {
 public:
 	HashJoinLocalSinkState(const PhysicalHashJoin &op, ClientContext &context, HashJoinGlobalSinkState &gstate)
-	    : join_key_executor(context) {
+	    : join_key_executor(context), hash_staging(LogicalType::HASH) {
 		auto &allocator = BufferAllocator::Get(context);
 
 		for (auto &cond : op.conditions) {
@@ -250,6 +250,8 @@ public:
 	unique_ptr<JoinHashTable> hash_table;
 
 	unique_ptr<JoinFilterLocalState> local_filter_state;
+
+	Vector hash_staging;
 };
 
 unique_ptr<JoinHashTable> PhysicalHashJoin::InitializeHashTable(ClientContext &context) const {
@@ -328,7 +330,7 @@ SinkResultType PhysicalHashJoin::Sink(ExecutionContext &context, DataChunk &chun
 	auto &lstate = input.local_state.Cast<HashJoinLocalSinkState>();
 
 	if (lip_type & LIP_BUILD) {
-		bf_build->Insert(chunk);
+		bf_build->Insert(chunk, lstate.hash_staging);
 	}
 
 	// resolve the join keys for the right chunk
@@ -1541,6 +1543,18 @@ InsertionOrderPreservingMap<string> PhysicalHashJoin::ParamsToString() const {
 		                       ExpressionTypeToOperator(join_condition.comparison), join_condition.right->GetName());
 	}
 	result["Conditions"] = condition_info;
+
+	if (lip_type & LIP_BUILD) {
+		result["LIP Build"] = StringUtil::Format("0x%zu", bf_build.get());
+	}
+
+	if (lip_type & LIP_PROBE) {
+		string probe_info = StringUtil::Format("0x%zu", bf_probe[0].get());
+		for (size_t i = 1; i < bf_probe.size(); i++) {
+			probe_info += StringUtil::Format("\n0x%zu", bf_probe[i].get());
+		}
+		result["LIP Probe"] = probe_info;
+	}
 
 	SetEstimatedCardinality(result, estimated_cardinality);
 	return result;

@@ -43,7 +43,8 @@ public:
 	bool finalized_;
 
 public:
-	int Lookup(DataChunk &chunk, vector<uint32_t> &results, const vector<idx_t> &bound_cols_applied) const;
+	int Lookup(DataChunk &chunk, vector<uint32_t> &results, const vector<idx_t> &bound_cols_applied, Vector &hash_staging) const;
+	void Insert(DataChunk &chunk, const vector<idx_t> &bound_cols_built, Vector &hash_staging);
 	void Insert(DataChunk &chunk, const vector<idx_t> &bound_cols_built);
 
 	uint32_t num_sectors;
@@ -180,11 +181,20 @@ public:
 	}
 
 public:
+	int Lookup(DataChunk &chunk, vector<uint32_t> &results, Vector &hash_staging) const {
+		return bloom_filter->Lookup(chunk, results, bound_cols_applied, hash_staging);
+	}
 	int Lookup(DataChunk &chunk, vector<uint32_t> &results) const {
-		return bloom_filter->Lookup(chunk, results, bound_cols_applied);
+		auto v = Vector(LogicalType::HASH);
+		return bloom_filter->Lookup(chunk, results, bound_cols_applied, v);
+	}
+
+	void Insert(DataChunk &chunk, Vector &hash_staging) const {
+		return bloom_filter->Insert(chunk, bound_cols_built, hash_staging);
 	}
 	void Insert(DataChunk &chunk) const {
-		return bloom_filter->Insert(chunk, bound_cols_built);
+		auto v = Vector(LogicalType::HASH);
+		return Insert(chunk, v);
 	}
 
 private:
