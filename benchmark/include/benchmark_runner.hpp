@@ -56,6 +56,7 @@ public:
 	unordered_map<string, string> custom_arguments;
 
 	TransferMode transfer_mode = NONE;
+	FilterMode filter_mode = FILTER_ON;
 };
 
 } // namespace duckdb
