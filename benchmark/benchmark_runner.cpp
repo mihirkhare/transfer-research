@@ -205,6 +205,7 @@ void print_help() {
 	fprintf(stderr, "Usage: benchmark_runner\n");
 	fprintf(stderr, "              --transfer=mode        Sets the transfer mode (none, rpt, rptplus) (default: "
 					"none)\n");
+	fprintf(stderr, "              --filter=mode          Sets the min-max filter mode (off, on) (default: off)\n");
 	fprintf(stderr, "              --list                 Show a list of all benchmarks\n");
 	fprintf(stderr, "              --profile              Prints the query profile information\n");
 	fprintf(stderr, "              --detailed-profile     Prints detailed query profile information\n");
@@ -277,6 +278,17 @@ void parse_arguments(const int arg_counter, char const *const *arg_values) {
 				instance.transfer_mode = RPT_PLUS;
 			} else {
 				fprintf(stderr, "Invalid transfer mode specified (none, rpt, rptplus)");
+				print_help();
+				exit(1);
+			}
+		} else if (StringUtil::StartsWith(arg, "--filter=")) {
+			string filter_mode = StringUtil::Split(arg, '=')[1];
+			if (filter_mode == "off") {
+				instance.filter_mode = FILTER_OFF;
+			} else if (filter_mode == "on") {
+				instance.filter_mode = FILTER_ON;
+			} else {
+				fprintf(stderr, "Invalid min-max filter mode specified (on, off)");
 				print_help();
 				exit(1);
 			}

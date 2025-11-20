@@ -31,6 +31,11 @@ enum TransferMode {
 	RPT_PLUS
 };
 
+enum FilterMode {
+	FILTER_ON,
+	FILTER_OFF
+};
+
 typedef std::function<unique_ptr<PhysicalResultCollector>(ClientContext &context, PreparedStatementData &data)>
     get_result_collector_t;
 
@@ -54,9 +59,10 @@ struct ClientConfig {
 	//! to output anything
 	bool emit_profiler_output = true;
 
-	/** LIP/RPT/RPT+ *********************************************************/
+	/** RPT/RPT+ *********************************************************/
 
 	TransferMode transfer_mode = NONE;
+	FilterMode filter_mode = FILTER_ON;
 
 	/*************************************************************************/
 
