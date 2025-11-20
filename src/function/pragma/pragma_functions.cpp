@@ -156,9 +156,9 @@ static void PragmaTransferNone(ClientContext &context, const FunctionParameters 
 	ClientConfig::GetConfig(context).transfer_mode = NONE;
 }
 
-static void PragmaTransferLIP(ClientContext &context, const FunctionParameters &parameters) {
-	ClientConfig::GetConfig(context).transfer_mode = LIP;
-}
+// static void PragmaTransferLIP(ClientContext &context, const FunctionParameters &parameters) {
+// 	ClientConfig::GetConfig(context).transfer_mode = LIP;
+// }
 
 static void PragmaTransferRPT(ClientContext &context, const FunctionParameters &parameters) {
 	ClientConfig::GetConfig(context).transfer_mode = RPT;
@@ -213,7 +213,7 @@ void PragmaFunctions::RegisterFunction(BuiltinFunctions &set) {
 	    PragmaFunction::PragmaStatement("disable_checkpoint_on_shutdown", PragmaDisableCheckpointOnShutdown));
 
 	set.AddFunction(PragmaFunction::PragmaStatement("transfer_none", PragmaTransferNone));
-	set.AddFunction(PragmaFunction::PragmaStatement("transfer_lip", PragmaTransferLIP));
+	// set.AddFunction(PragmaFunction::PragmaStatement("transfer_lip", PragmaTransferLIP));
 	set.AddFunction(PragmaFunction::PragmaStatement("transfer_rpt", PragmaTransferRPT));
 	set.AddFunction(PragmaFunction::PragmaStatement("transfer_rptplus", PragmaTransferRPTPlus));
 }

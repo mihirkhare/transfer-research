@@ -175,7 +175,7 @@ public:
 		return bloom_filter->Lookup(chunk, results, bound_cols_applied);
 	}
 	void Insert(DataChunk &chunk) const {
-		return bloom_filter->Insert(chunk, bound_cols_applied);
+		return bloom_filter->Insert(chunk, bound_cols_built);
 	}
 
 private:

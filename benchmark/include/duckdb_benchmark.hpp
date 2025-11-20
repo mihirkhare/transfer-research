@@ -51,9 +51,9 @@ struct DuckDBBenchmarkState : public BenchmarkState {
 		case NONE:
 			conn.Query("PRAGMA transfer_none");
 			break;
-		case LIP:
-			conn.Query("PRAGMA transfer_lip");
-			break;
+		// case LIP:
+		// 	conn.Query("PRAGMA transfer_lip");
+		// 	break;
 		case RPT:
 			conn.Query("PRAGMA transfer_rpt");
 			break;

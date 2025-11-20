@@ -26,7 +26,7 @@ class PreparedStatementData;
 
 enum TransferMode {
 	NONE,
-	LIP,
+	// LIP,
 	RPT,
 	RPT_PLUS
 };

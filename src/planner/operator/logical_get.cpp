@@ -49,6 +49,12 @@ InsertionOrderPreservingMap<string> LogicalGet::ParamsToString() const {
 	}
 	result["Filters"] = filters_info;
 
+	if (dynamic_filters && dynamic_filters->HasFilters()) {
+		result["Dynamic Filters"] = "Present";
+	} else {
+		result["Dynamic Filters"] = "None";
+	}
+
 	if (extra_info.sample_options) {
 		result["Sample Method"] = "System: " + extra_info.sample_options->sample_size.ToString() + "%";
 	}

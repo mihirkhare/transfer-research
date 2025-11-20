@@ -54,9 +54,9 @@ struct InterpretedBenchmarkState : public BenchmarkState {
 		case NONE:
 			con.Query("PRAGMA transfer_none");
 			break;
-		case LIP:
-			con.Query("PRAGMA transfer_lip");
-			break;
+		// case LIP:
+		// 	con.Query("PRAGMA transfer_lip");
+		// 	break;
 		case RPT:
 			con.Query("PRAGMA transfer_rpt");
 			break;

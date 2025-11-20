@@ -238,6 +238,37 @@ InsertionOrderPreservingMap<string> PhysicalTableScan::ParamsToString() const {
 		}
 		result["Filters"] = filters_info;
 	}
+	if (function.filter_pushdown && dynamic_filters && dynamic_filters->HasFilters()) {
+		string dynamic_info;
+		bool first_item = true;
+		auto filters = dynamic_filters->GetFinalTableFilters(*this, nullptr);
+		if (filters) {
+			for (auto &f : filters->filters) {
+				auto &column_index = f.first;
+				auto &filter = f.second;
+				if (column_index < names.size()) {
+					if (!first_item) {
+						dynamic_info += "\n";
+					}
+					first_item = false;
+
+					const auto col_id = column_ids[column_index].GetPrimaryIndex();
+					if (IsVirtualColumn(col_id)) {
+						auto entry = virtual_columns.find(col_id);
+						if (entry == virtual_columns.end()) {
+							throw InternalException("Virtual column not found");
+						}
+						dynamic_info += filter->ToString(entry->second.name);
+					} else {
+						dynamic_info += filter->ToString(names[col_id]);
+					}
+				}
+			}
+
+		}
+		result["Dynamic Filters"] = dynamic_info;
+	}
+
 	if (extra_info.sample_options) {
 		result["Sample Method"] = "System: " + extra_info.sample_options->sample_size.ToString() + "%";
 	}
