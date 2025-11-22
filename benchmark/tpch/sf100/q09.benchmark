@@ -1,0 +1,7 @@
+# name: benchmark/tpch/sf100/q09.benchmark
+# description: Run query 09 from the TPC-H benchmark (single-threaded)
+# group: [sf100]
+
+template benchmark/tpch/sf100/tpch_sf100.benchmark.in
+QUERY_NUMBER=9
+QUERY_NUMBER_PADDED=09

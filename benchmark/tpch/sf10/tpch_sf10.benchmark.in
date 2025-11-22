@@ -1,8 +1,8 @@
 # name: ${FILE_PATH}
 # description: ${DESCRIPTION}
-# group: [sf1]
+# group: [sf10]
 
-include benchmark/tpch/sf1/tpch_load.benchmark.in
+include benchmark/tpch/sf10/tpch_load.benchmark.in
 
 name Q${QUERY_NUMBER_PADDED}
 group tpch

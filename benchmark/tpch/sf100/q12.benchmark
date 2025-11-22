@@ -1,0 +1,7 @@
+# name: benchmark/tpch/sf100/q12.benchmark
+# description: Run query 12 from the TPC-H benchmark (single-threaded)
+# group: [sf100]
+
+template benchmark/tpch/sf100/tpch_sf100.benchmark.in
+QUERY_NUMBER=12
+QUERY_NUMBER_PADDED=12
