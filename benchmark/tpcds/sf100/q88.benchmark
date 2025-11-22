@@ -1,0 +1,7 @@
+# name: benchmark/tpcds/sf100/q88.benchmark
+# description: Run query 88 from the TPC-DS benchmark
+# group: [sf100]
+
+template benchmark/tpcds/sf100/tpcds_sf100.benchmark.in
+QUERY_NUMBER=88
+QUERY_NUMBER_PADDED=88
