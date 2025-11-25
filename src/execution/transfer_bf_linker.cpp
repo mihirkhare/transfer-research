@@ -49,8 +49,11 @@ void TransferBFLinker::VisitOperator(LogicalOperator &op) {
 			for (auto &filter_plan : create_bf_op.filter_plans) {
 				bf_creators[filter_plan.get()] = &create_bf_op;
 			}
-			create_bf_op.min_max_to_create.resize(create_bf_op.filter_plans.size());
-			create_bf_op.min_max_applied_cols.resize(create_bf_op.filter_plans.size());
+
+			if (ClientConfig::GetConfig(context).filter_mode == FILTER_ON) {
+				create_bf_op.min_max_to_create.resize(create_bf_op.filter_plans.size());
+				create_bf_op.min_max_applied_cols.resize(create_bf_op.filter_plans.size());
+			}
 		}
 		break;
 	}
@@ -110,7 +113,8 @@ void TransferBFLinker::VisitOperator(LogicalOperator &op) {
 					auto &binding = expr;
 					updated_bindings.push_back(binding);
 				}
-				UpdateMinMaxBinding(*bf_user.children[0], updated_bindings, filter_set);
+				// Link the min-max filter to lowest valid child, or self
+				UpdateMinMaxBinding(bf_user, updated_bindings, filter_set);
 
 				if (filter_set) {
 					auto *related_creator = bf_user.related_create_bf;
@@ -208,7 +212,7 @@ void TransferBFLinker::UpdateMinMaxBinding(LogicalOperator &op, vector<ColumnBin
 		auto &get = child.Cast<LogicalGet>();
 		if (!get.function.filter_pushdown) {
 			// filter pushdown is not supported - no need to consider this node
-			return;
+			break;
 		}
 
 		if (!get.dynamic_filters) {
@@ -216,24 +220,47 @@ void TransferBFLinker::UpdateMinMaxBinding(LogicalOperator &op, vector<ColumnBin
 		}
 
 		filter_set = get.dynamic_filters;
-		return;
+		break;
 	}
 	case LogicalOperatorType::LOGICAL_PROJECTION: {
 		// projection - check if we all of the expressions are only column references
 		auto &proj = child.Cast<LogicalProjection>();
-		for (auto &binding : updated_bindings) {
+		vector<ColumnBinding> new_bindings(updated_bindings.size());
+		for (idx_t i = 0; i < updated_bindings.size(); i++) {
+			const auto &binding = updated_bindings[i];
 			auto &expr = *proj.expressions[binding.column_index];
-			binding = expr.Cast<BoundColumnRefExpression>().binding;
+			new_bindings[i] = expr.Cast<BoundColumnRefExpression>().binding;
 		}
-		UpdateMinMaxBinding(*child.children[0], updated_bindings, filter_set);
+		UpdateMinMaxBinding(*child.children[0], new_bindings, filter_set);
+		if (filter_set) {
+			updated_bindings = new_bindings;
+		}
 		break;
 	}
-	case LogicalOperatorType::LOGICAL_USE_BF:
-	case LogicalOperatorType::LOGICAL_CREATE_BF:
 	case LogicalOperatorType::LOGICAL_FILTER:
 	case LogicalOperatorType::LOGICAL_COMPARISON_JOIN: {
 		// does not affect probe side - recurse into left child
 		UpdateMinMaxBinding(*child.children[0], updated_bindings, filter_set);
+		break;
+	}
+	case LogicalOperatorType::LOGICAL_CREATE_BF: {
+		// Pipeline breaker, filters cannot correctly go below this
+		break;
+	}
+	case LogicalOperatorType::LOGICAL_USE_BF: {
+		// First, check if there is a place below to push the filter
+		UpdateMinMaxBinding(*child.children[0], updated_bindings, filter_set);
+		if (filter_set) {
+			break;
+		}
+
+		// If not, push it to here
+		auto &use = op.Cast<LogicalUseBF>();
+		if (!use.min_max_to_use) {
+			use.min_max_to_use = make_shared_ptr<DynamicTableFilterSet>();
+		}
+
+		filter_set = use.min_max_to_use;
 		break;
 	}
 	default:

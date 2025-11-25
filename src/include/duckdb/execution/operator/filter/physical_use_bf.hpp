@@ -17,13 +17,13 @@ public:
 
 public:
 	PhysicalUseBF(vector<LogicalType> types, const shared_ptr<FilterPlan> &filter_plan, unique_ptr<BloomFilterUsage> bf,
-	              PhysicalCreateBF *related_create_bfs, idx_t estimated_cardinality);
+	              PhysicalCreateBF *related_create_bfs, idx_t estimated_cardinality, shared_ptr<DynamicTableFilterSet> min_max_to_use);
 
 	shared_ptr<FilterPlan> filter_plan;
 	PhysicalCreateBF *related_creator = nullptr;
 
 	shared_ptr<BloomFilterUsage> bf_to_use;
-
+	shared_ptr<DynamicTableFilterSet> min_max_to_use;
 public:
 	// Operator interface
 	unique_ptr<OperatorState> GetOperatorState(ExecutionContext &context) const override;

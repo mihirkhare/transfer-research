@@ -26,7 +26,7 @@ class TableScanGlobalSourceState : public GlobalSourceState {
 public:
 	TableScanGlobalSourceState(ClientContext &context, const PhysicalTableScan &op) {
 		if (op.dynamic_filters && op.dynamic_filters->HasFilters()) {
-			table_filters = op.dynamic_filters->GetFinalTableFilters(op, op.table_filters.get());
+			table_filters = op.dynamic_filters->GetFinalTableFilters(op.table_filters.get());
 		}
 
 		if (op.function.init_global) {
@@ -241,7 +241,7 @@ InsertionOrderPreservingMap<string> PhysicalTableScan::ParamsToString() const {
 	if (function.filter_pushdown && dynamic_filters && dynamic_filters->HasFilters()) {
 		string dynamic_info;
 		bool first_item = true;
-		auto filters = dynamic_filters->GetFinalTableFilters(*this, nullptr);
+		auto filters = dynamic_filters->GetFinalTableFilters(nullptr);
 		if (filters) {
 			for (auto &f : filters->filters) {
 				auto &column_index = f.first;
