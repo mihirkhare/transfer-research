@@ -1,14 +1,19 @@
 #include "duckdb/execution/operator/filter/physical_use_bf.hpp"
 
+#include "duckdb/execution/adaptive_filter.hpp"
 #include "duckdb/parallel/meta_pipeline.hpp"
 #include "duckdb/parallel/thread_context.hpp"
+#include "duckdb/planner/filter/constant_filter.hpp"
+
+#include <iostream>
 
 namespace duckdb {
 PhysicalUseBF::PhysicalUseBF(vector<LogicalType> types, const shared_ptr<FilterPlan> &filter_plan,
                              unique_ptr<BloomFilterUsage> bf, PhysicalCreateBF *related_create_bfs,
-                             idx_t estimated_cardinality)
+                             idx_t estimated_cardinality, shared_ptr<DynamicTableFilterSet> min_max_to_use)
     : CachingPhysicalOperator(PhysicalOperatorType::USE_BF, std::move(types), estimated_cardinality),
-      filter_plan(filter_plan), related_creator(related_create_bfs), bf_to_use(std::move(bf)) {
+      filter_plan(filter_plan), related_creator(related_create_bfs), bf_to_use(std::move(bf)),
+      min_max_to_use(std::move(min_max_to_use)) {
 }
 
 class UseBFState : public CachingOperatorState {
@@ -17,12 +22,26 @@ public:
 	static constexpr double SELECTIVITY_THRESHOLD = 0.9;
 
 public:
-	explicit UseBFState(bool valid_bf)
+	UseBFState(const PhysicalUseBF &op, ClientContext &context, bool valid_bf)
 	    : sel_vector(STANDARD_VECTOR_SIZE), lookup_results(STANDARD_VECTOR_SIZE), use_bf(valid_bf) {
+		if (op.min_max_to_use && op.min_max_to_use->HasFilters()) {
+			auto filter_set = op.min_max_to_use->GetFinalTableFilters(nullptr);
+			filter_set->UnifyFilters();
+			adaptive_filter = make_uniq<AdaptiveFilter>(*filter_set);
+			min_max_to_use.reserve(filter_set->filters.size());
+			for (auto &entry : filter_set->filters) {
+				min_max_to_use.push_back(std::move(entry));
+			}
+			min_max_chunk.Initialize(context, op.types);
+		}
 	}
 
 	SelectionVector sel_vector;
 	vector<uint32_t> lookup_results;
+
+	vector<pair<idx_t, unique_ptr<TableFilter>>> min_max_to_use;
+	unique_ptr<AdaptiveFilter> adaptive_filter;
+	DataChunk min_max_chunk;
 
 	bool use_bf;
 	bool is_checked = false;
@@ -52,12 +71,34 @@ public:
 };
 
 unique_ptr<OperatorState> PhysicalUseBF::GetOperatorState(ExecutionContext &context) const {
-	return make_uniq<UseBFState>(bf_to_use->IsValid());
+	return make_uniq<UseBFState>(*this, context.client, bf_to_use->IsValid());
 }
 
 InsertionOrderPreservingMap<string> PhysicalUseBF::ParamsToString() const {
 	InsertionOrderPreservingMap<string> result;
 	result["BF Creators"] = "0x" + std::to_string(reinterpret_cast<size_t>(related_creator)) + "\n";
+
+	if (min_max_to_use && min_max_to_use->HasFilters()) {
+		string dynamic_info;
+		bool first_item = true;
+		auto filters = min_max_to_use->GetFinalTableFilters(nullptr);
+		if (filters) {
+			for (auto &f : filters->filters) {
+				auto &column_index = f.first;
+				auto &filter = f.second;
+				if (!first_item) {
+					dynamic_info += "\n";
+				}
+				first_item = false;
+
+				dynamic_info += filter->ToString("col" + std::to_string(column_index));
+			}
+		}
+		result["Dynamic Filters"] = dynamic_info;
+	} else {
+		result["Dynamic Filters"] = "None";
+	}
+
 	return result;
 }
 
@@ -73,6 +114,36 @@ void PhysicalUseBF::BuildPipelines(Pipeline &current, MetaPipeline &meta_pipelin
 OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, DataChunk &input, DataChunk &chunk,
                                                   GlobalOperatorState &gstate, OperatorState &state_p) const {
 	auto &state = state_p.Cast<UseBFState>();
+
+	// Begin adaptive min-max filtering
+	if (state.adaptive_filter) {
+		SelectionVector min_max_sel;
+		idx_t approved_tuple_count = input.size();
+		auto start = state.adaptive_filter->BeginFilter();
+		for (idx_t i = 0; i < state.min_max_to_use.size(); i++) {
+			auto &info = state.min_max_to_use[state.adaptive_filter->permutation[i]];
+			auto column_idx = info.first;
+			auto &filter = info.second->Cast<ConstantFilter>();
+
+			auto &col = input.data[column_idx];
+			auto new_sel = SelectionVector(approved_tuple_count);
+
+			idx_t result_count = 0;
+			for (idx_t j = 0; j < approved_tuple_count; j++) {
+				auto idx = min_max_sel.get_index(j);
+				bool comparison_result = filter.Compare(col.GetValue(idx));
+				new_sel.set_index(result_count, idx);
+				result_count += comparison_result;
+			}
+			approved_tuple_count = result_count;
+
+			min_max_sel.Initialize(new_sel);
+		}
+		state.adaptive_filter->EndFilter(start);
+		if (approved_tuple_count != input.size()) {
+			input.Slice(min_max_sel, approved_tuple_count);
+		}
+	}
 
 	// This operator has no BloomFilter to use
 	if (!state.use_bf) {

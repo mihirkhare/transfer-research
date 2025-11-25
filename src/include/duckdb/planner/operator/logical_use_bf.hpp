@@ -15,7 +15,7 @@ public:
 
 	shared_ptr<FilterPlan> filter_plan;
 	LogicalCreateBF *related_create_bf = nullptr;
-
+	shared_ptr<DynamicTableFilterSet> min_max_to_use;
 public:
 	InsertionOrderPreservingMap<string> ParamsToString() const override;
 
