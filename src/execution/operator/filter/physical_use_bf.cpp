@@ -155,7 +155,8 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 			idx_t result_count = 0;
 			for (idx_t j = 0; j < approved_tuple_count; j++) {
 				auto idx = min_max_sel.get_index(j);
-				bool comparison_result = filter.Compare(col.GetValue(idx));
+				auto value = col.GetValue(idx);
+				bool comparison_result = !value.IsNull() && filter.Compare(value);
 				new_sel.set_index(result_count, idx);
 				result_count += comparison_result;
 			}
