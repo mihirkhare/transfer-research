@@ -219,22 +219,32 @@ void TransferBFLinker::UpdateMinMaxBinding(LogicalOperator &op, vector<ColumnBin
 			get.dynamic_filters = make_shared_ptr<DynamicTableFilterSet>();
 		}
 
+		auto current_cols = child.GetColumnBindings();
+		for (auto &binding : updated_bindings) {
+			auto it = std::find(current_cols.begin(), current_cols.end(), binding);
+			if (it != current_cols.end()) {
+				binding.column_index = std::distance(current_cols.begin(), it);
+			} else {
+				std::cout << "Oopsie!\n";
+			}
+		}
+
 		filter_set = get.dynamic_filters;
 		break;
 	}
 	case LogicalOperatorType::LOGICAL_PROJECTION: {
 		// projection - check if we all of the expressions are only column references
-		auto &proj = child.Cast<LogicalProjection>();
-		vector<ColumnBinding> new_bindings(updated_bindings.size());
-		for (idx_t i = 0; i < updated_bindings.size(); i++) {
-			const auto &binding = updated_bindings[i];
-			auto &expr = *proj.expressions[binding.column_index];
-			new_bindings[i] = expr.Cast<BoundColumnRefExpression>().binding;
-		}
-		UpdateMinMaxBinding(*child.children[0], new_bindings, filter_set);
-		if (filter_set) {
-			updated_bindings = new_bindings;
-		}
+		// auto &proj = child.Cast<LogicalProjection>();
+		// vector<ColumnBinding> new_bindings(updated_bindings.size());
+		// for (idx_t i = 0; i < updated_bindings.size(); i++) {
+		// 	const auto &binding = updated_bindings[i];
+		// 	auto &expr = *proj.expressions[binding.column_index];
+		// 	new_bindings[i] = expr.Cast<BoundColumnRefExpression>().binding;
+		// }
+		// UpdateMinMaxBinding(*child.children[0], new_bindings, filter_set);
+		// if (filter_set) {
+		// 	updated_bindings = new_bindings;
+		// }
 		break;
 	}
 	case LogicalOperatorType::LOGICAL_FILTER:
@@ -258,6 +268,16 @@ void TransferBFLinker::UpdateMinMaxBinding(LogicalOperator &op, vector<ColumnBin
 		auto &use = op.Cast<LogicalUseBF>();
 		if (!use.min_max_to_use) {
 			use.min_max_to_use = make_shared_ptr<DynamicTableFilterSet>();
+		}
+
+		auto current_cols = child.GetColumnBindings();
+		for (auto &binding : updated_bindings) {
+			auto it = std::find(current_cols.begin(), current_cols.end(), binding);
+			if (it != current_cols.end()) {
+				binding.column_index = std::distance(current_cols.begin(), it);
+			} else {
+				std::cout << "Oopsie!\n";
+			}
 		}
 
 		filter_set = use.min_max_to_use;
