@@ -22,16 +22,33 @@ public:
 	static constexpr double SELECTIVITY_THRESHOLD = 0.9;
 
 public:
+	static void PopulateConstantFilters(idx_t col_idx, unique_ptr<TableFilter> filter, vector<pair<idx_t, unique_ptr<TableFilter>>> &filters) {
+		if (filter->filter_type == TableFilterType::CONSTANT_COMPARISON) {
+			filters.emplace_back(col_idx, std::move(filter));
+		} else if (filter->filter_type == TableFilterType::CONJUNCTION_AND) {
+			for (auto &f : filter->Cast<ConjunctionAndFilter>().child_filters) {
+				PopulateConstantFilters(col_idx, std::move(f), filters);
+			}
+		} else {
+			throw NotImplementedException("TableFilterType not implemented in UseBFState::PopulateConstantFilters");
+		}
+	}
+
 	UseBFState(const PhysicalUseBF &op, ClientContext &context, bool valid_bf)
 	    : sel_vector(STANDARD_VECTOR_SIZE), lookup_results(STANDARD_VECTOR_SIZE), use_bf(valid_bf) {
 		if (op.min_max_to_use && op.min_max_to_use->HasFilters()) {
 			auto filter_set = op.min_max_to_use->GetFinalTableFilters(nullptr);
 			filter_set->UnifyFilters();
-			adaptive_filter = make_uniq<AdaptiveFilter>(*filter_set);
-			min_max_to_use.reserve(filter_set->filters.size());
+			// adaptive_filter = make_uniq<AdaptiveFilter>(*filter_set);
 			for (auto &entry : filter_set->filters) {
-				min_max_to_use.push_back(std::move(entry));
+				PopulateConstantFilters(entry.first, std::move(entry.second), min_max_to_use);
 			}
+			// min_max_to_use.reserve(filter_set->filters.size());
+			// std::cout << "For UseBF:\n" << op.ToString();
+			// for (auto &entry : filter_set->filters) {
+			// 	std::cout << "- column " << entry.first << " has type " << op.GetTypes()[entry.first].ToString() << '\n';
+			// 	min_max_to_use.push_back(std::move(entry));
+			// }
 			min_max_chunk.Initialize(context, op.types);
 		}
 	}
@@ -40,7 +57,7 @@ public:
 	vector<uint32_t> lookup_results;
 
 	vector<pair<idx_t, unique_ptr<TableFilter>>> min_max_to_use;
-	unique_ptr<AdaptiveFilter> adaptive_filter;
+	// unique_ptr<AdaptiveFilter> adaptive_filter;
 	DataChunk min_max_chunk;
 
 	bool use_bf;
@@ -77,6 +94,12 @@ unique_ptr<OperatorState> PhysicalUseBF::GetOperatorState(ExecutionContext &cont
 InsertionOrderPreservingMap<string> PhysicalUseBF::ParamsToString() const {
 	InsertionOrderPreservingMap<string> result;
 	result["BF Creators"] = "0x" + std::to_string(reinterpret_cast<size_t>(related_creator)) + "\n";
+
+	string bound_cols_apply;
+	for (const auto &col : filter_plan->bound_cols_apply) {
+		bound_cols_apply += std::to_string(col) + " ";
+	}
+	result["Apply (Bound)"] = bound_cols_apply;
 
 	if (min_max_to_use && min_max_to_use->HasFilters()) {
 		string dynamic_info;
@@ -116,12 +139,13 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 	auto &state = state_p.Cast<UseBFState>();
 
 	// Begin adaptive min-max filtering
-	if (state.adaptive_filter) {
+	// if (state.adaptive_filter) {
 		SelectionVector min_max_sel;
 		idx_t approved_tuple_count = input.size();
-		auto start = state.adaptive_filter->BeginFilter();
+		// auto start = state.adaptive_filter->BeginFilter();
 		for (idx_t i = 0; i < state.min_max_to_use.size(); i++) {
-			auto &info = state.min_max_to_use[state.adaptive_filter->permutation[i]];
+			// auto &info = state.min_max_to_use[state.adaptive_filter->permutation[i]];
+			auto &info = state.min_max_to_use[i];
 			auto column_idx = info.first;
 			auto &filter = info.second->Cast<ConstantFilter>();
 
@@ -139,11 +163,11 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 
 			min_max_sel.Initialize(new_sel);
 		}
-		state.adaptive_filter->EndFilter(start);
+		// state.adaptive_filter->EndFilter(start);
 		if (approved_tuple_count != input.size()) {
 			input.Slice(min_max_sel, approved_tuple_count);
 		}
-	}
+	// }
 
 	// This operator has no BloomFilter to use
 	if (!state.use_bf) {
