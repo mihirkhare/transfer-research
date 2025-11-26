@@ -7,6 +7,8 @@
 #include "duckdb/planner/operator/logical_projection.hpp"
 #include "duckdb/planner/operator/logical_comparison_join.hpp"
 
+#include <iostream>
+
 namespace duckdb {
 
 void TransferBFLinker::LinkBFOperators(LogicalOperator &op) {
@@ -50,10 +52,8 @@ void TransferBFLinker::VisitOperator(LogicalOperator &op) {
 				bf_creators[filter_plan.get()] = &create_bf_op;
 			}
 
-			if (ClientConfig::GetConfig(context).filter_mode == FILTER_ON) {
-				create_bf_op.min_max_to_create.resize(create_bf_op.filter_plans.size());
-				create_bf_op.min_max_applied_cols.resize(create_bf_op.filter_plans.size());
-			}
+			create_bf_op.min_max_to_create.resize(create_bf_op.filter_plans.size());
+			create_bf_op.min_max_applied_cols.resize(create_bf_op.filter_plans.size());
 		}
 		break;
 	}
@@ -219,6 +219,7 @@ void TransferBFLinker::UpdateMinMaxBinding(LogicalOperator &op, vector<ColumnBin
 			get.dynamic_filters = make_shared_ptr<DynamicTableFilterSet>();
 		}
 
+		/*
 		auto current_cols = child.GetColumnBindings();
 		for (auto &binding : updated_bindings) {
 			auto it = std::find(current_cols.begin(), current_cols.end(), binding);
@@ -228,6 +229,7 @@ void TransferBFLinker::UpdateMinMaxBinding(LogicalOperator &op, vector<ColumnBin
 				std::cout << "Oopsie!\n";
 			}
 		}
+		*/
 
 		filter_set = get.dynamic_filters;
 		break;
