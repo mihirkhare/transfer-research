@@ -39,9 +39,11 @@ public:
 		if (op.min_max_to_use && op.min_max_to_use->HasFilters()) {
 			auto filter_set = op.min_max_to_use->GetFinalTableFilters(nullptr);
 			filter_set->UnifyFilters();
-			// adaptive_filter = make_uniq<AdaptiveFilter>(*filter_set);
 			for (auto &entry : filter_set->filters) {
 				PopulateConstantFilters(entry.first, std::move(entry.second), min_max_to_use);
+			}
+			if (ClientConfig::GetConfig(context).filter_mode == FILTER_ADAPT) {
+				adaptive_filter = make_uniq<AdaptiveFilter>(min_max_to_use);
 			}
 			// min_max_to_use.reserve(filter_set->filters.size());
 			// std::cout << "For UseBF:\n" << op.ToString();
@@ -57,7 +59,7 @@ public:
 	vector<uint32_t> lookup_results;
 
 	vector<pair<idx_t, unique_ptr<TableFilter>>> min_max_to_use;
-	// unique_ptr<AdaptiveFilter> adaptive_filter;
+	unique_ptr<AdaptiveFilter> adaptive_filter;
 	DataChunk min_max_chunk;
 
 	bool use_bf;
@@ -139,12 +141,36 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 	auto &state = state_p.Cast<UseBFState>();
 
 	// Begin adaptive min-max filtering
-	// if (state.adaptive_filter) {
-		SelectionVector min_max_sel;
-		idx_t approved_tuple_count = input.size();
-		// auto start = state.adaptive_filter->BeginFilter();
+	SelectionVector min_max_sel;
+	idx_t approved_tuple_count = input.size();
+	if (state.adaptive_filter) {
+		auto start = state.adaptive_filter->BeginFilter();
 		for (idx_t i = 0; i < state.min_max_to_use.size(); i++) {
-			// auto &info = state.min_max_to_use[state.adaptive_filter->permutation[i]];
+			auto &info = state.min_max_to_use[state.adaptive_filter->permutation[i]];
+			auto column_idx = info.first;
+			auto &filter = info.second->Cast<ConstantFilter>();
+
+			auto &col = input.data[column_idx];
+			auto new_sel = SelectionVector(approved_tuple_count);
+
+			idx_t result_count = 0;
+			for (idx_t j = 0; j < approved_tuple_count; j++) {
+				auto idx = min_max_sel.get_index(j);
+				auto value = col.GetValue(idx);
+				bool comparison_result = !value.IsNull() && filter.Compare(value);
+				new_sel.set_index(result_count, idx);
+				result_count += comparison_result;
+			}
+			approved_tuple_count = result_count;
+
+			min_max_sel.Initialize(new_sel);
+		}
+		state.adaptive_filter->EndFilter(start);
+		if (approved_tuple_count != input.size()) {
+			input.Slice(min_max_sel, approved_tuple_count);
+		}
+	} else {
+		for (idx_t i = 0; i < state.min_max_to_use.size(); i++) {
 			auto &info = state.min_max_to_use[i];
 			auto column_idx = info.first;
 			auto &filter = info.second->Cast<ConstantFilter>();
@@ -164,14 +190,13 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 
 			min_max_sel.Initialize(new_sel);
 		}
-		// state.adaptive_filter->EndFilter(start);
 		if (approved_tuple_count != input.size()) {
 			input.Slice(min_max_sel, approved_tuple_count);
 		}
-	// }
+	}
 
 	// This operator has no BloomFilter to use
-	if (!state.use_bf) {
+	if (input.size() == 0 || !state.use_bf) {
 		chunk.Reference(input);
 		return OperatorResultType::NEED_MORE_INPUT;
 	}

@@ -58,7 +58,9 @@ void ScanFilterInfo::Initialize(ClientContext &context, TableFilterSet &filters,
                                 const vector<StorageIndex> &column_ids) {
 	D_ASSERT(!filters.filters.empty());
 	table_filters = &filters;
-	adaptive_filter = make_uniq<AdaptiveFilter>(filters);
+	if (ClientConfig::GetConfig(context).filter_mode == FILTER_ADAPT) {
+		adaptive_filter = make_uniq<AdaptiveFilter>(filters);
+	}
 	filter_list.reserve(filters.filters.size());
 	for (auto &entry : filters.filters) {
 		filter_list.emplace_back(context, entry.first, column_ids, *entry.second);
@@ -111,7 +113,7 @@ void ScanFilterInfo::SetFilterAlwaysTrue(idx_t filter_idx) {
 }
 
 optional_ptr<AdaptiveFilter> ScanFilterInfo::GetAdaptiveFilter() {
-	return adaptive_filter.get();
+	return adaptive_filter ? adaptive_filter.get() : nullptr;
 }
 
 AdaptiveFilterState ScanFilterInfo::BeginFilter() const {

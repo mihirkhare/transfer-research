@@ -32,7 +32,8 @@ enum TransferMode {
 };
 
 enum FilterMode {
-	FILTER_ON,
+	FILTER_ADAPT,
+	FILTER_STATIC,
 	FILTER_OFF
 };
 
@@ -62,7 +63,7 @@ struct ClientConfig {
 	/** RPT/RPT+ *********************************************************/
 
 	TransferMode transfer_mode = NONE;
-	FilterMode filter_mode = FILTER_ON;
+	FilterMode filter_mode = FILTER_ADAPT;
 
 	/*************************************************************************/
 

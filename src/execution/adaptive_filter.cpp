@@ -22,6 +22,15 @@ AdaptiveFilter::AdaptiveFilter(const Expression &expr) : observe_interval(10), e
 	right_random_border = 100 * (conj_expr.children.size() - 1);
 }
 
+AdaptiveFilter::AdaptiveFilter(const vector<pair<idx_t, unique_ptr<TableFilter>>> &table_filters)
+	: observe_interval(10), execute_interval(20), warmup(true) {
+	permutation = ExpressionHeuristics::GetInitialOrder(table_filters);
+	for (idx_t idx = 1; idx < table_filters.size(); idx++) {
+		swap_likeliness.push_back(100);
+	}
+	right_random_border = 100 * (table_filters.size() - 1);
+}
+
 AdaptiveFilter::AdaptiveFilter(const TableFilterSet &table_filters)
     : observe_interval(10), execute_interval(20), warmup(true) {
 	permutation = ExpressionHeuristics::GetInitialOrder(table_filters);
