@@ -23,6 +23,7 @@ class AdaptiveFilter {
 public:
 	explicit AdaptiveFilter(const Expression &expr);
 	explicit AdaptiveFilter(const TableFilterSet &table_filters);
+	explicit AdaptiveFilter(const vector<pair<idx_t, unique_ptr<TableFilter>>> &table_filters);
 
 	vector<idx_t> permutation;
 

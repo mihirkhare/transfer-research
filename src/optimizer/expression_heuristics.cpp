@@ -259,6 +259,36 @@ idx_t ExpressionHeuristics::Cost(TableFilter &filter) {
 	}
 }
 
+vector<idx_t> ExpressionHeuristics::GetInitialOrder(const vector<pair<idx_t, unique_ptr<TableFilter>>> &table_filters) {
+	struct FilterCost {
+		idx_t index;
+		idx_t cost;
+
+		bool operator==(const FilterCost &p) const {
+			return cost == p.cost;
+		}
+		bool operator<(const FilterCost &p) const {
+			return cost < p.cost;
+		}
+	};
+	vector<FilterCost> filter_costs;
+	idx_t filter_index = 0;
+	for (auto &entry : table_filters) {
+		FilterCost cost;
+		cost.index = filter_index;
+		cost.cost = Cost(*entry.second);
+		filter_costs.push_back(cost);
+		filter_index++;
+	}
+	// sort by cost and put back in place
+	sort(filter_costs.begin(), filter_costs.end());
+	vector<idx_t> initial_permutation;
+	for (idx_t i = 0; i < filter_costs.size(); i++) {
+		initial_permutation.push_back(filter_costs[i].index);
+	}
+	return initial_permutation;
+}
+
 vector<idx_t> ExpressionHeuristics::GetInitialOrder(const TableFilterSet &table_filters) {
 	struct FilterCost {
 		idx_t index;

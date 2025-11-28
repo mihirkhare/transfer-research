@@ -66,8 +66,11 @@ struct InterpretedBenchmarkState : public BenchmarkState {
 		}
 
 		switch (instance.filter_mode) {
-		case FILTER_ON:
-			con.Query("PRAGMA filter_on");
+		case FILTER_ADAPT:
+			con.Query("PRAGMA filter_adapt");
+			break;
+		case FILTER_STATIC:
+			con.Query("PRAGMA filter_static");
 			break;
 		case FILTER_OFF:
 			con.Query("PRAGMA filter_off");

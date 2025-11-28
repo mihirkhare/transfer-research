@@ -285,10 +285,12 @@ void parse_arguments(const int arg_counter, char const *const *arg_values) {
 			string filter_mode = StringUtil::Split(arg, '=')[1];
 			if (filter_mode == "off") {
 				instance.filter_mode = FILTER_OFF;
-			} else if (filter_mode == "on") {
-				instance.filter_mode = FILTER_ON;
+			} else if (filter_mode == "static") {
+				instance.filter_mode = FILTER_STATIC;
+			} else if (filter_mode == "adapt") {
+				instance.filter_mode = FILTER_ADAPT;
 			} else {
-				fprintf(stderr, "Invalid min-max filter mode specified (on, off)");
+				fprintf(stderr, "Invalid min-max filter mode specified (adapt, static, off)");
 				print_help();
 				exit(1);
 			}

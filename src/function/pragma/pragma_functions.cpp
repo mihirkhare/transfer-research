@@ -168,8 +168,12 @@ static void PragmaTransferRPTPlus(ClientContext &context, const FunctionParamete
 	ClientConfig::GetConfig(context).transfer_mode = RPT_PLUS;
 }
 
-static void PragmaFilterOn(ClientContext &context, const FunctionParameters &parameters) {
-	ClientConfig::GetConfig(context).filter_mode = FILTER_ON;
+static void PragmaFilterAdapt(ClientContext &context, const FunctionParameters &parameters) {
+	ClientConfig::GetConfig(context).filter_mode = FILTER_ADAPT;
+}
+
+static void PragmaFilterStatic(ClientContext &context, const FunctionParameters &parameters) {
+	ClientConfig::GetConfig(context).filter_mode = FILTER_STATIC;
 }
 
 static void PragmaFilterOff(ClientContext &context, const FunctionParameters &parameters) {
@@ -225,7 +229,8 @@ void PragmaFunctions::RegisterFunction(BuiltinFunctions &set) {
 	set.AddFunction(PragmaFunction::PragmaStatement("transfer_rpt", PragmaTransferRPT));
 	set.AddFunction(PragmaFunction::PragmaStatement("transfer_rptplus", PragmaTransferRPTPlus));
 
-	set.AddFunction(PragmaFunction::PragmaStatement("filter_on", PragmaFilterOn));
+	set.AddFunction(PragmaFunction::PragmaStatement("filter_adapt", PragmaFilterAdapt));
+	set.AddFunction(PragmaFunction::PragmaStatement("filter_static", PragmaFilterStatic));
 	set.AddFunction(PragmaFunction::PragmaStatement("filter_off", PragmaFilterOff));
 }
 

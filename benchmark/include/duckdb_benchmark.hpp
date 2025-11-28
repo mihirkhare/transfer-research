@@ -64,8 +64,11 @@ struct DuckDBBenchmarkState : public BenchmarkState {
 		}
 
 		switch (instance.filter_mode) {
-		case FILTER_ON:
-			conn.Query("PRAGMA filter_on");
+		case FILTER_ADAPT:
+			conn.Query("PRAGMA filter_adapt");
+			break;
+		case FILTER_STATIC:
+			conn.Query("PRAGMA filter_static");
 			break;
 		case FILTER_OFF:
 			conn.Query("PRAGMA filter_off");

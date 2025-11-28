@@ -279,7 +279,7 @@ void Optimizer::RunBuiltInOptimizers() {
 
 	// perform join filter pushdown after the dust has settled
 	if (ClientConfig::GetConfig(context).transfer_mode == NONE &&
-		ClientConfig::GetConfig(context).filter_mode == FILTER_ON) {
+		ClientConfig::GetConfig(context).filter_mode != FILTER_OFF) {
 		RunOptimizer(OptimizerType::JOIN_FILTER_PUSHDOWN, [&]() {
 			JoinFilterPushdownOptimizer join_filter_pushdown(*this);
 			join_filter_pushdown.VisitOperator(*plan);
