@@ -22,14 +22,14 @@ void TransferBFLinker::LinkBFOperators(LogicalOperator &op) {
 	VisitOperator(op);
 
 	if (ClientConfig::GetConfig(context).transfer_mode == RPT_PLUS) {
+		state = State::SMOOTH_MARK_JOIN;
+		VisitOperator(op);
+
 		// TODO: should this one happen always?
 		if (ClientConfig::GetConfig(context).filter_mode != FILTER_OFF) {
 			state = State::UPDATE_MIN_MAX_BINDING;
 			VisitOperator(op);
 		}
-
-		state = State::SMOOTH_MARK_JOIN;
-		VisitOperator(op);
 	}
 }
 
