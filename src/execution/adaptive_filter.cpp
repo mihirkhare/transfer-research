@@ -69,7 +69,7 @@ void AdaptiveFilter::AdaptRuntimeStatistics(double duration) {
 			// keep swap if runtime decreased, else reverse swap
 			if (prev_mean - (runtime_sum / static_cast<double>(iteration_count)) <= 0) {
 				// reverse swap because runtime didn't decrease
-				std::swap(permutation[swap_idx], permutation[swap_idx + 1]);
+				// std::swap(permutation[swap_idx], permutation[swap_idx + 1]);
 
 				// decrease swap likeliness, but make sure there is always a small likeliness left
 				if (swap_likeliness[swap_idx] > 1) {
@@ -98,7 +98,7 @@ void AdaptiveFilter::AdaptRuntimeStatistics(double duration) {
 			// check if swap is going to happen
 			if (swap_likeliness[swap_idx] > likeliness) { // always true for the first swap of an index
 				// swap
-				std::swap(permutation[swap_idx], permutation[swap_idx + 1]);
+				// std::swap(permutation[swap_idx], permutation[swap_idx + 1]);
 
 				// observe whether swap will be applied
 				observe = true;
