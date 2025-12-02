@@ -187,7 +187,7 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 		}
 	} else {
 		for (idx_t i = 0; i < state.min_max_to_use.size(); i++) {
-			idx_t perm_idx = state.adaptive_filter->permutation[i];
+			idx_t perm_idx = i;
 			auto &info = state.min_max_to_use[perm_idx];
 			auto column_idx = info.first;
 			auto &filter = *info.second;
