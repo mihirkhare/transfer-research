@@ -262,27 +262,27 @@ void TransferBFLinker::UpdateMinMaxBinding(LogicalOperator &op, vector<ColumnBin
 	case LogicalOperatorType::LOGICAL_USE_BF: {
 		// First, check if there is a place below to push the filter
 		UpdateMinMaxBinding(*child.children[0], updated_bindings, filter_set);
-		if (filter_set) {
-			break;
-		}
-
-		// If not, push it to here
-		auto &use = op.Cast<LogicalUseBF>();
-		if (!use.min_max_to_use) {
-			use.min_max_to_use = make_shared_ptr<DynamicTableFilterSet>();
-		}
-
-		auto current_cols = child.GetColumnBindings();
-		for (auto &binding : updated_bindings) {
-			auto it = std::find(current_cols.begin(), current_cols.end(), binding);
-			if (it != current_cols.end()) {
-				binding.column_index = std::distance(current_cols.begin(), it);
-			} else {
-				std::cout << "Oopsie!\n";
-			}
-		}
-
-		filter_set = use.min_max_to_use;
+		// if (filter_set) {
+		// 	break;
+		// }
+		//
+		// // If not, push it to here
+		// auto &use = op.Cast<LogicalUseBF>();
+		// if (!use.min_max_to_use) {
+		// 	use.min_max_to_use = make_shared_ptr<DynamicTableFilterSet>();
+		// }
+		//
+		// auto current_cols = child.GetColumnBindings();
+		// for (auto &binding : updated_bindings) {
+		// 	auto it = std::find(current_cols.begin(), current_cols.end(), binding);
+		// 	if (it != current_cols.end()) {
+		// 		binding.column_index = std::distance(current_cols.begin(), it);
+		// 	} else {
+		// 		std::cout << "Oopsie!\n";
+		// 	}
+		// }
+		//
+		// filter_set = use.min_max_to_use;
 		break;
 	}
 	default:
