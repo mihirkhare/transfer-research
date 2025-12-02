@@ -3,7 +3,9 @@
 #include "duckdb/execution/adaptive_filter.hpp"
 #include "duckdb/parallel/meta_pipeline.hpp"
 #include "duckdb/parallel/thread_context.hpp"
+#include "duckdb/planner/table_filter_state.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
+#include "duckdb/storage/table/column_segment.hpp"
 
 #include <iostream>
 
@@ -40,7 +42,9 @@ public:
 			auto filter_set = op.min_max_to_use->GetFinalTableFilters(nullptr);
 			filter_set->UnifyFilters();
 			for (auto &entry : filter_set->filters) {
-				PopulateConstantFilters(entry.first, std::move(entry.second), min_max_to_use);
+				min_max_states.push_back(TableFilterState::Initialize(context, *entry.second));
+				min_max_to_use.push_back(std::move(entry));
+				// PopulateConstantFilters(entry.first, std::move(entry.second), min_max_to_use);
 			}
 			if (ClientConfig::GetConfig(context).filter_mode == FILTER_ADAPT) {
 				adaptive_filter = make_uniq<AdaptiveFilter>(min_max_to_use);
@@ -59,6 +63,7 @@ public:
 	vector<uint32_t> lookup_results;
 
 	vector<pair<idx_t, unique_ptr<TableFilter>>> min_max_to_use;
+	vector<unique_ptr<TableFilterState>> min_max_states;
 	unique_ptr<AdaptiveFilter> adaptive_filter;
 	DataChunk min_max_chunk;
 
@@ -142,28 +147,39 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 
 	// Begin adaptive min-max filtering
 	SelectionVector min_max_sel;
-	idx_t approved_tuple_count = input.size();
+	idx_t input_size = input.size();
+	idx_t approved_tuple_count = input_size;
 	if (state.adaptive_filter) {
 		auto start = state.adaptive_filter->BeginFilter();
 		for (idx_t i = 0; i < state.min_max_to_use.size(); i++) {
-			auto &info = state.min_max_to_use[state.adaptive_filter->permutation[i]];
+			idx_t perm_idx = state.adaptive_filter->permutation[i];
+			auto &info = state.min_max_to_use[perm_idx];
 			auto column_idx = info.first;
-			auto &filter = info.second->Cast<ConstantFilter>();
+			auto &filter = *info.second;
+			auto &filter_state = *state.min_max_states[perm_idx];
 
-			auto &col = input.data[column_idx];
-			auto new_sel = SelectionVector(approved_tuple_count);
+			auto &col_vec = input.data[column_idx];
 
-			idx_t result_count = 0;
-			for (idx_t j = 0; j < approved_tuple_count; j++) {
-				auto idx = min_max_sel.get_index(j);
-				auto value = col.GetValue(idx);
-				bool comparison_result = !value.IsNull() && filter.Compare(value);
-				new_sel.set_index(result_count, idx);
-				result_count += comparison_result;
-			}
-			approved_tuple_count = result_count;
+			UnifiedVectorFormat vdata;
+			col_vec.ToUnifiedFormat(input.size(), vdata);
+			ColumnSegment::FilterSelection(min_max_sel, col_vec, vdata, filter, filter_state, input_size, approved_tuple_count);
 
-			min_max_sel.Initialize(new_sel);
+			// auto &filter = info.second->Cast<ConstantFilter>();
+			//
+			// auto &col = input.data[column_idx];
+			// auto new_sel = SelectionVector(approved_tuple_count);
+			//
+			// idx_t result_count = 0;
+			// for (idx_t j = 0; j < approved_tuple_count; j++) {
+			// 	auto idx = min_max_sel.get_index(j);
+			// 	auto value = col.GetValue(idx);
+			// 	bool comparison_result = !value.IsNull() && filter.Compare(value);
+			// 	new_sel.set_index(result_count, idx);
+			// 	result_count += comparison_result;
+			// }
+			// approved_tuple_count = result_count;
+
+			// min_max_sel.Initialize(new_sel);
 		}
 		state.adaptive_filter->EndFilter(start);
 		if (approved_tuple_count != input.size()) {
@@ -171,24 +187,34 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 		}
 	} else {
 		for (idx_t i = 0; i < state.min_max_to_use.size(); i++) {
-			auto &info = state.min_max_to_use[i];
+			idx_t perm_idx = state.adaptive_filter->permutation[i];
+			auto &info = state.min_max_to_use[perm_idx];
 			auto column_idx = info.first;
-			auto &filter = info.second->Cast<ConstantFilter>();
+			auto &filter = *info.second;
+			auto &filter_state = *state.min_max_states[perm_idx];
 
-			auto &col = input.data[column_idx];
-			auto new_sel = SelectionVector(approved_tuple_count);
+			auto &col_vec = input.data[column_idx];
 
-			idx_t result_count = 0;
-			for (idx_t j = 0; j < approved_tuple_count; j++) {
-				auto idx = min_max_sel.get_index(j);
-				auto value = col.GetValue(idx);
-				bool comparison_result = !value.IsNull() && filter.Compare(value);
-				new_sel.set_index(result_count, idx);
-				result_count += comparison_result;
-			}
-			approved_tuple_count = result_count;
+			UnifiedVectorFormat vdata;
+			col_vec.ToUnifiedFormat(input.size(), vdata);
+			ColumnSegment::FilterSelection(min_max_sel, col_vec, vdata, filter, filter_state, input_size, approved_tuple_count);
 
-			min_max_sel.Initialize(new_sel);
+			// auto &filter = info.second->Cast<ConstantFilter>();
+			//
+			// auto &col = input.data[column_idx];
+			// auto new_sel = SelectionVector(approved_tuple_count);
+			//
+			// idx_t result_count = 0;
+			// for (idx_t j = 0; j < approved_tuple_count; j++) {
+			// 	auto idx = min_max_sel.get_index(j);
+			// 	auto value = col.GetValue(idx);
+			// 	bool comparison_result = !value.IsNull() && filter.Compare(value);
+			// 	new_sel.set_index(result_count, idx);
+			// 	result_count += comparison_result;
+			// }
+			// approved_tuple_count = result_count;
+
+			// min_max_sel.Initialize(new_sel);
 		}
 		if (approved_tuple_count != input.size()) {
 			input.Slice(min_max_sel, approved_tuple_count);
