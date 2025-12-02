@@ -8,6 +8,8 @@
 #include "duckdb/storage/table/row_group_segment_tree.hpp"
 #include "duckdb/transaction/duck_transaction.hpp"
 
+#include <iostream>
+
 namespace duckdb {
 
 TableScanState::TableScanState() : table_state(*this), local_state(*this) {
@@ -57,6 +59,12 @@ ScanFilter::ScanFilter(ClientContext &context, idx_t index, const vector<Storage
 void ScanFilterInfo::Initialize(ClientContext &context, TableFilterSet &filters,
                                 const vector<StorageIndex> &column_ids) {
 	D_ASSERT(!filters.filters.empty());
+
+	std::cout << "Initializing filters:\n";
+	for (auto &entry : filters.filters) {
+		std::cout << entry.second->ToString("test") << '\n';
+	}
+
 	table_filters = &filters;
 	if (ClientConfig::GetConfig(context).filter_mode == FILTER_ADAPT) {
 		adaptive_filter = make_uniq<AdaptiveFilter>(filters);

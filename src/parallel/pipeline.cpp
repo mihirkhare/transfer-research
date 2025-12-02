@@ -15,6 +15,8 @@
 #include "duckdb/execution/operator/persistent/physical_create_bf.hpp"
 #include "duckdb/execution/operator/join/physical_hash_join.hpp"
 
+#include <iostream>
+
 namespace duckdb {
 
 PipelineTask::PipelineTask(Pipeline &pipeline_p, shared_ptr<Event> event_p)
@@ -207,6 +209,7 @@ void Pipeline::ResetSink() {
 }
 
 void Pipeline::PrepareFinalize() {
+	std::cout << "Finalizing pipeline:\n" << ToString();
 	if (sink) {
 		if (!sink->IsSink()) {
 			throw InternalException("Sink of pipeline does not have IsSink set");
@@ -220,6 +223,7 @@ void Pipeline::PrepareFinalize() {
 }
 
 void Pipeline::Reset() {
+	if (source) std::cout << "Resetting pipeline with source\n" << source->ToString();
 	ResetSink();
 	for (auto &op_ref : operators) {
 		auto &op = op_ref.get();

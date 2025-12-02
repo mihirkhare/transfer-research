@@ -39,6 +39,8 @@ unique_ptr<LogicalOperator> PredicateTransferOptimizer::Optimize(unique_ptr<Logi
 		}
 	}
 
+	graph_manager.PrintTransferPlan();
+
 	return InsertTransferOperators(std::move(plan));
 }
 

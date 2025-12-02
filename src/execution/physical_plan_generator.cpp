@@ -51,6 +51,8 @@ PhysicalOperator &PhysicalPlanGenerator::ResolveAndPlan(unique_ptr<LogicalOperat
 	physical_plan = PlanInternal(*op);
 	profiler.EndPhase();
 
+	std::cout << "Physical plan:\n" << physical_plan->Root().ToString();
+
 	// Return a reference to the root of this plan.
 	return physical_plan->Root();
 }

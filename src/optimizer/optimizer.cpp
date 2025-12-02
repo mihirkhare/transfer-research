@@ -286,7 +286,7 @@ void Optimizer::RunBuiltInOptimizers() {
 		});
 	}
 
-	// std::cout << "Final plan:\n" << plan->ToString();
+	std::cout << "Final plan:\n" << plan->ToString();
 }
 
 unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<LogicalOperator> plan_p) {

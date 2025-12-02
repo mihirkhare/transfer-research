@@ -27,6 +27,8 @@
 #include "duckdb/storage/storage_manager.hpp"
 #include "duckdb/storage/temporary_memory_manager.hpp"
 
+#include <iostream>
+
 namespace duckdb {
 
 PhysicalHashJoin::PhysicalHashJoin(LogicalOperator &op, PhysicalOperator &left, PhysicalOperator &right,
@@ -758,6 +760,7 @@ unique_ptr<DataChunk> JoinFilterPushdownInfo::Finalize(ClientContext &context, o
 	gstate.global_aggregate_state->Finalize(*final_min_max);
 
 	if (probe_info.empty()) {
+		std::cout << "Nothing to push to!\n";
 		return final_min_max; // There are not table souces in which we can push down filters
 	}
 
@@ -770,9 +773,12 @@ unique_ptr<DataChunk> JoinFilterPushdownInfo::Finalize(ClientContext &context, o
 			auto min_idx = filter_idx * 2;
 			auto max_idx = min_idx + 1;
 
+			std::cout << "Try to push to filter col " << filter_col_idx << '\n';
+
 			auto min_val = final_min_max->data[min_idx].GetValue(0);
 			auto max_val = final_min_max->data[max_idx].GetValue(0);
 			if (min_val.IsNull() || max_val.IsNull()) {
+				std::cout << "\tFailed!\n";
 				// min/max is NULL
 				// this can happen in case all values in the RHS column are NULL, but they are still pushed into the
 				// hash table e.g. because they are part of a RIGHT join
@@ -891,6 +897,7 @@ SinkFinalizeType PhysicalHashJoin::Finalize(Pipeline &pipeline, Event &event, Cl
 	Value min;
 	Value max;
 	if (filter_pushdown && !sink.skip_filter_pushdown && ht.Count() > 0) {
+		std::cout << "Finalizing filter for join:\n" << ToString();
 		auto final_min_max = filter_pushdown->Finalize(context, &ht, *sink.global_filter_state, *this);
 		min = final_min_max->data[0].GetValue(0);
 		max = final_min_max->data[1].GetValue(0);
@@ -912,6 +919,9 @@ SinkFinalizeType PhysicalHashJoin::Finalize(Pipeline &pipeline, Event &event, Cl
 		sink.ScheduleFinalize(pipeline, event);
 	}
 	sink.finalized = true;
+
+	std::cout << "Final Join:\n" << ToString();
+
 	if (ht.Count() == 0 && EmptyResultIfRHSIsEmpty()) {
 		return SinkFinalizeType::NO_OUTPUT_POSSIBLE;
 	}

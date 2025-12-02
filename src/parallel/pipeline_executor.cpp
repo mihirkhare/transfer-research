@@ -5,6 +5,8 @@
 #include "duckdb/execution/operator/persistent/physical_create_bf.hpp"
 #include "duckdb/execution/operator/filter/physical_filter.hpp"
 
+#include <iostream>
+
 #ifdef DUCKDB_DEBUG_ASYNC_SINK_SOURCE
 #include <chrono>
 #include <thread>
@@ -187,6 +189,8 @@ SinkNextBatchType PipelineExecutor::NextBatch(DataChunk &source_chunk) {
 
 PipelineExecuteResult PipelineExecutor::Execute(idx_t max_chunks) {
 	D_ASSERT(pipeline.sink);
+	std::cout << "Executing pipeline:\n" << pipeline.ToString();
+
 	auto &source_chunk = pipeline.operators.empty() ? final_chunk : *intermediate_chunks[0];
 	ExecutionBudget chunk_budget(max_chunks);
 	do {

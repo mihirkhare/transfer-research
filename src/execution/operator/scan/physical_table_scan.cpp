@@ -5,6 +5,7 @@
 #include "duckdb/planner/expression/bound_conjunction_expression.hpp"
 #include "duckdb/transaction/transaction.hpp"
 
+#include <iostream>
 #include <utility>
 
 namespace duckdb {
@@ -25,6 +26,8 @@ PhysicalTableScan::PhysicalTableScan(vector<LogicalType> types, TableFunction fu
 class TableScanGlobalSourceState : public GlobalSourceState {
 public:
 	TableScanGlobalSourceState(ClientContext &context, const PhysicalTableScan &op) {
+		std::cout << "Scan:\n" << op.ToString();
+
 		if (op.dynamic_filters && op.dynamic_filters->HasFilters()) {
 			table_filters = op.dynamic_filters->GetFinalTableFilters(op.table_filters.get());
 		}
@@ -171,19 +174,19 @@ string PhysicalTableScan::GetName() const {
 	return StringUtil::Upper(function.name + " " + function.extra_info);
 }
 
-void AddProjectionNames(const ColumnIndex &index, const string &name, const LogicalType &type, string &result) {
+void AddProjectionNames(const ColumnIndex &index, idx_t column_id, const string &name, const LogicalType &type, string &result) {
 	if (!index.HasChildren()) {
 		// base case - no children projected out
 		if (!result.empty()) {
 			result += "\n";
 		}
-		result += name;
+		result += name + " (" + std::to_string(column_id) + ')';
 		return;
 	}
 	auto &child_types = StructType::GetChildTypes(type);
 	for (auto &child_index : index.GetChildIndexes()) {
 		auto &ele = child_types[child_index.GetPrimaryIndex()];
-		AddProjectionNames(child_index, name + "." + ele.first, ele.second, result);
+		AddProjectionNames(child_index, 0, name + "." + ele.first, ele.second, result);
 	}
 }
 
@@ -206,9 +209,13 @@ InsertionOrderPreservingMap<string> PhysicalTableScan::ParamsToString() const {
 			auto &column_index = column_ids[base_index];
 			auto column_id = column_index.GetPrimaryIndex();
 			if (column_id >= names.size()) {
+				if (!projections.empty()) {
+					projections += '\n';
+				}
+				projections += "NULL column";
 				continue;
 			}
-			AddProjectionNames(column_index, names[column_id], returned_types[column_id], projections);
+			AddProjectionNames(column_index, column_id, names[column_id], returned_types[column_id], projections);
 		}
 		result["Projections"] = projections;
 	}
@@ -258,9 +265,9 @@ InsertionOrderPreservingMap<string> PhysicalTableScan::ParamsToString() const {
 						if (entry == virtual_columns.end()) {
 							throw InternalException("Virtual column not found");
 						}
-						dynamic_info += filter->ToString(entry->second.name);
+						dynamic_info += filter->ToString(entry->second.name + "/" + std::to_string(column_index) + "/" + std::to_string(col_id));
 					} else {
-						dynamic_info += filter->ToString(names[col_id]);
+						dynamic_info += filter->ToString(names[col_id] + "/" + std::to_string(column_index) + "/" + std::to_string(col_id));
 					}
 				}
 			}

@@ -14,6 +14,8 @@
 #include "duckdb/planner/operator/logical_set_operation.hpp"
 #include "duckdb/planner/operator/logical_unnest.hpp"
 
+#include <iostream>
+
 namespace duckdb {
 
 JoinFilterPushdownOptimizer::JoinFilterPushdownOptimizer(Optimizer &optimizer) : optimizer(optimizer) {
@@ -97,6 +99,7 @@ void JoinFilterPushdownOptimizer::GetPushdownFilterTargets(LogicalOperator &op,
 		// found LogicalGet
 		auto &get = probe_child.Cast<LogicalGet>();
 		if (!get.function.filter_pushdown) {
+			std::cout << "Bad input for filtering:\n" << probe_child.ToString();
 			// filter pushdown is not supported - no need to consider this node
 			return;
 		}
@@ -205,6 +208,11 @@ void JoinFilterPushdownOptimizer::GenerateJoinFilters(LogicalComparisonJoin &joi
 
 		pushdown_info->join_condition.push_back(cond_idx);
 	}
+
+	for (auto pushdown : pushdown_info->join_condition) {
+		std::cout << "Pushing down " << pushdown << '\n';
+	}
+
 	if (pushdown_columns.empty()) {
 		// could not generate any filters - bail-out
 		return;
@@ -214,6 +222,7 @@ void JoinFilterPushdownOptimizer::GenerateJoinFilters(LogicalComparisonJoin &joi
 	GetPushdownFilterTargets(*join.children[0], pushdown_columns, pushdown_filter_targets);
 	for (auto &target : pushdown_filter_targets) {
 		auto &get = target.get;
+		std::cout << "Maybe pushing to\n" << get.ToString();
 		// pushdown info can be applied to this LogicalGet - push the dynamic table filter set
 		if (!get.dynamic_filters) {
 			get.dynamic_filters = make_shared_ptr<DynamicTableFilterSet>();
@@ -255,12 +264,16 @@ void JoinFilterPushdownOptimizer::GenerateJoinFilters(LogicalComparisonJoin &joi
 			pushdown_info->min_max_aggregates.push_back(std::move(aggr_expr));
 		}
 	}
+
+	std::cout << "Pushing to the above!\n";
+
 	// set up the filter pushdown in the join itself
 	join.filter_pushdown = std::move(pushdown_info);
 }
 
 void JoinFilterPushdownOptimizer::VisitOperator(LogicalOperator &op) {
 	if (op.type == LogicalOperatorType::LOGICAL_COMPARISON_JOIN) {
+		std::cout << "Visiting join:\n" << op.ToString();
 		// comparison join - try to generate join filters (if possible)
 		GenerateJoinFilters(op.Cast<LogicalComparisonJoin>());
 	}
