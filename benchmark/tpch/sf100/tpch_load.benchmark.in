@@ -2,7 +2,7 @@
 # description: ${DESCRIPTION}
 # group: [tpch]
 
-argument sf 10
+argument sf 100
 
 require tpch
 

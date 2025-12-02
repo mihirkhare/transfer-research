@@ -4,9 +4,11 @@
 
 argument sf 10
 
-require tpch
+require tpcds
 
-cache tpch_sf${sf}.duckdb
+storage persistent
+
+cache tpcds_sf${sf}.duckdb
 
 load
-CALL dbgen(sf=${sf});
+CALL dsdgen(sf=${sf});
