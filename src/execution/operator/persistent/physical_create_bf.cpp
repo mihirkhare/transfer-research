@@ -330,16 +330,16 @@ public:
 	}
 
 	TaskExecutionResult ExecuteTask(TaskExecutionMode mode) override {
-		DataChunk chunk;
-		sink.data_collection->InitializeScanChunk(chunk);
-		for (idx_t i = chunk_idx_from; i < chunk_idx_to; i++) {
-			sink.data_collection->FetchChunk(i, chunk);
-			for (auto &pair : sink.op.unique_bloom_filters) {
-				auto &cols_build = pair.first;
-				auto &bf = pair.second;
-				bf->Insert(chunk, cols_build);
-			}
-		}
+		// DataChunk chunk;
+		// sink.data_collection->InitializeScanChunk(chunk);
+		// for (idx_t i = chunk_idx_from; i < chunk_idx_to; i++) {
+		// 	sink.data_collection->FetchChunk(i, chunk);
+		// 	for (auto &pair : sink.op.unique_bloom_filters) {
+		// 		auto &cols_build = pair.first;
+		// 		auto &bf = pair.second;
+		// 		bf->Insert(chunk, cols_build);
+		// 	}
+		// }
 		event->FinishTask();
 		return TaskExecutionResult::TASK_FINISHED;
 	}

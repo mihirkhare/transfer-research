@@ -182,9 +182,10 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 			// min_max_sel.Initialize(new_sel);
 		}
 		state.adaptive_filter->EndFilter(start);
-		if (approved_tuple_count != input.size()) {
-			input.Slice(min_max_sel, approved_tuple_count);
-		}
+		// if (approved_tuple_count != input.size()) {
+			chunk.Slice(input, min_max_sel, approved_tuple_count);
+			// input.Slice(min_max_sel, approved_tuple_count);
+		// }
 	} else {
 		for (idx_t i = 0; i < state.min_max_to_use.size(); i++) {
 			idx_t perm_idx = i;
@@ -216,10 +217,13 @@ OperatorResultType PhysicalUseBF::ExecuteInternal(ExecutionContext &context, Dat
 
 			// min_max_sel.Initialize(new_sel);
 		}
-		if (approved_tuple_count != input.size()) {
-			input.Slice(min_max_sel, approved_tuple_count);
-		}
+		// if (approved_tuple_count != input.size()) {
+			chunk.Slice(input, min_max_sel, approved_tuple_count);
+			// input.Slice(min_max_sel, approved_tuple_count);
+		// }
 	}
+
+	return OperatorResultType::NEED_MORE_INPUT;
 
 	// This operator has no BloomFilter to use
 	if (input.size() == 0 || !state.use_bf) {
